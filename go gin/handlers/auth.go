@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	config "myproject/dbs"
 	"myproject/models"
@@ -9,29 +10,59 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/argon2"
+	"fmt"
 )
+
+const (
+	timeCost   = 1
+	memoryCost = 64 * 1024
+	threads    = 4
+	keyLength  = 32
+	salt       = "3Le7Tow2"
+)
+
+func HashPassword(password string) []byte {
+	hash := argon2.IDKey([]byte(password), []byte(salt), timeCost, memoryCost, threads, keyLength)
+	return hash
+}
+
+func VerifyPassword(password string, hash []byte) bool {
+	expectedHash := argon2.IDKey([]byte(password), []byte(salt), timeCost, memoryCost, threads, keyLength)
+	return bytes.Equal(hash, expectedHash)
+}
+
+// func HashPassword(password string) []byte {
+// 	hash := argon2.Key([]byte(password), []byte(salt), timeCost, memoryCost, threads, keyLength)
+// 	return hash
+// }
+
+// func VerifyPassword(password string, hash []byte) bool {
+// 	expectedHash := argon2.Key([]byte(password), []byte(salt), timeCost, memoryCost, threads, keyLength)
+// 	return bytes.Equal(hash, expectedHash)
+// }
 
 // Register
 func Register(c *gin.Context) {
 	var newUser models.User
-
+	fmt.Println("user", newUser)
 	if err := c.ShouldBindJSON(&newUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+
 	// hash pass
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot has password"})
-		return
-	}
+	hashedPassword := HashPassword(newUser.Password)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Cannot has password"})
+	// 	return
+	// }
 	newUser.Password = string(hashedPassword)
 
 	// Check exist
 	var existingUser models.User
-	err = config.UserCollection.FindOne(context.TODO(), bson.M{"username": newUser.Username}).Decode(&existingUser)
+	err := config.UserCollection.FindOne(context.TODO(), bson.M{"username": newUser.Username}).Decode(&existingUser)
 	if err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User has already exists"})
 		return
@@ -80,8 +111,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Kiểm tra mật khẩu
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password)); err != nil {
+	// Check password
+	if !VerifyPassword(loginData.Password, []byte(user.Password)) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
