@@ -9,6 +9,7 @@ import (
 
 var Client *mongo.Client
 var UserCollection *mongo.Collection
+var KeyCollection *mongo.Collection
 
 func ConnectMongoDB() {
     clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
@@ -24,5 +25,7 @@ func ConnectMongoDB() {
 
     Client = client
     UserCollection = client.Database("myapp").Collection("users")
+    KeyCollection = client.Database("myapp").Collection("Keys")
+
     log.Println("Connected to MongoDB!")
 }
