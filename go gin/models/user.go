@@ -11,3 +11,24 @@ type User struct {
 	Address     string `json:"address" bson:"address"`
 	Salt        string `json:"-" bson:"salt"` // Exclude from JSON serialization
 }
+
+type UserRegistrationResponse struct {
+	Message string `json:"message"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type LoginRequest struct {
+	UsernameOrEmail string `json:"username_or_email"`
+	Password        string `json:"password"`
+}
+
+type LoginResponse struct {
+	Message     string `json:"message"`
+	UserID      string `json:"user"`
+	AccessToken string `json:"token"`
+	PublicKey   string `json:"public"`
+	PrivateKey  string `json:"private"`
+}

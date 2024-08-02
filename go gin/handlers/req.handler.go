@@ -19,15 +19,15 @@ func MiddlewareAuthentication() gin.HandlerFunc {
 	fmt.Printf("Middleware")
 	return func(c *gin.Context) {
 		accessToken := c.GetHeader("Authorization")
-		userId := c.GetHeader("X-Client-ID")
+		clientId := c.GetHeader("X-Client-ID")
 
-		objectId, err := primitive.ObjectIDFromHex(userId)
+		objectId, err := primitive.ObjectIDFromHex(clientId)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
 			return
 		}
 		var key models.Key
-		err = config.KeyCollection.FindOne(context.Background(), bson.M{"user_id": objectId}).Decode(&key)
+		err = config.KeyCollection.FindOne(context.Background(), bson.M{"_id": objectId}).Decode(&key)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
 			return

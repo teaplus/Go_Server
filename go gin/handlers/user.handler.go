@@ -16,6 +16,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/argon2"
 )
@@ -61,10 +62,20 @@ func VerifyPassword(password string, hash, salt []byte) bool {
 // 	return bytes.Equal(hash, expectedHash)
 // }
 
-// Register
+// Register godoc
+// @Summary Register a new user
+// @Description Register a new user with a username, email, and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User Registration Data"
+// @Success 200 {object} models.UserRegistrationResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 409 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/register [post]
 func Register(c *gin.Context) {
 	var newUser models.User
-	fmt.Println("user", newUser)
 	if err := c.ShouldBindJSON(&newUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -116,6 +127,19 @@ func generateKey(size int) (string, error) {
 }
 
 // Login
+
+// Login godoc
+// @Summary Log in a user
+// @Description Log in a user using username or email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param loginData body models.LoginRequest true "Login Data"
+// @Success 200 {object} models.LoginResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/login [post]
 func Login(c *gin.Context) {
 	var loginData struct {
 		UsernameOrEmail string `json:"username_or_email"`
@@ -158,7 +182,6 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding hashed password"})
 		return
 	}
-	fmt.Print("salt", hashedPassword)
 
 	// Check password
 	if !VerifyPassword(loginData.Password, []byte(hashedPassword), []byte(salt)) {
@@ -178,7 +201,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("key", user)
 	Claims := ultils.Claims{
 		User: user.ID.Hex(),
 		StandardClaims: jwt.StandardClaims{
@@ -200,11 +222,45 @@ func Login(c *gin.Context) {
 		UpdatedAt:    time.Now(),
 	}
 
-	_, err = config.KeyCollection.InsertOne(context.TODO(), key)
+	keyInsert, err := config.KeyCollection.InsertOne(context.TODO(), key)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error registering user"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user": user.ID, "token": token["accessToken"], "Public": publicKey, "private": privateKey})
+	fmt.Println("key", keyInsert)
+
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "client_id": keyInsert.InsertedID, "token": token["accessToken"], "Public": publicKey, "private": privateKey})
+}
+
+
+// Logout godoc
+// @Summary Log out a user
+// @Description Log out a user by invalidating their session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param X-Client-ID header string true "Client ID"
+// @Success 200 {object} map[string]string{"message": "Logout Success!"}
+// @Failure 500 {object} map[string]string{"error": "Logout Error"}
+// @Router /api/v1/logout [post]
+
+func Logout(c *gin.Context) {
+	clientId := c.GetHeader("X-Client-ID")
+
+	objectId, err := primitive.ObjectIDFromHex(clientId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	var key models.Key
+	err = config.KeyCollection.FindOneAndDelete(context.Background(), bson.M{"_id": objectId}).Decode(&key)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Logout Error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Logout Success!"})
+
 }

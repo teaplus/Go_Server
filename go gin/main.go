@@ -4,13 +4,17 @@ import (
 	config "myproject/dbs"
 	"myproject/handlers"
 
+	"net/http"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerfiles "github.com/swaggo/files"
+	docs "myproject/docs"
 )
 
 func protectedHandler(c *gin.Context) {
-    c.JSON(http.StatusOK, gin.H{"message": "Hello, authenticated user!"})
+	c.JSON(http.StatusOK, gin.H{"message": "Hello, authenticated user!"})
 }
 
 func main() {
@@ -18,7 +22,7 @@ func main() {
 	config.ConnectMongoDB()
 
 	router := gin.Default()
-
+	// Swagger API docs
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
@@ -26,11 +30,16 @@ func main() {
 
 	router.Use(cors.New(config))
 	router.Use()
-
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	v1 := router.Group("/api/v1")
+	{
+		v1.POST("/register", handlers.Register)
+		v1.POST("/login", handlers.Login)
+		v1.POST("/logout", handlers.MiddlewareAuthentication(), handlers.Logout)
+	}
 	// Định nghĩa các route cho đăng ký và đăng nhập
-	router.POST("/register", handlers.Register)
-	router.POST("/login", handlers.Login)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	
 
-	router.GET("/",handlers.MiddlewareAuthentication(), protectedHandler )
 	router.Run(":8080") // Chạy server trên cổng 8080
 }
