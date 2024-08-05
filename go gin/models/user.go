@@ -12,6 +12,24 @@ type User struct {
 	Salt        string `json:"-" bson:"salt"` // Exclude from JSON serialization
 }
 
+// type User struct {
+// 	ID          *primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+// 	Username    string              `json:"username" bson:"username"`
+// 	Email       string              `json:"email" bson:"email"`
+// 	PhoneNumber string `json:"phone_number" bson:"phone_number"`
+// 	Address     string `json:"address" bson:"address"`
+// 	 // Exclude from JSON serialization
+// }
+
+// type Account struct {
+// 	ID   *primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
+// 	User primitive.ObjectID  `json:"user_id,omitempty" bson:"user_id,omitempty"`
+// 	Username    string              `json:"username" bson:"username"`
+// 	Email       string              `json:"email" bson:"email"`
+// 	Password    string
+// 	Salt        string `json:"-" bson:"salt"`
+// }
+
 type UserRegistrationResponse struct {
 	Message string `json:"message"`
 }

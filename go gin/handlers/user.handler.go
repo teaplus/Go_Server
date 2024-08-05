@@ -228,12 +228,10 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("key", keyInsert)
+	// fmt.Println("key", keyInsert)
 
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "client_id": keyInsert.InsertedID, "token": token["accessToken"], "Public": publicKey, "private": privateKey})
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "client_id": keyInsert.InsertedID, "user_id": key.User, "token": token, "Public": publicKey, "private": privateKey})
 }
-
 
 // Logout godoc
 // @Summary Log out a user
@@ -262,5 +260,88 @@ func Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logout Success!"})
+
+}
+
+func GetUser(c *gin.Context) {
+	userId := c.GetHeader("user")
+	objectId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	fmt.Println("object", objectId)
+	var user models.User
+	err = config.UserCollection.FindOne(context.Background(), bson.M{"_id": objectId}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"username": user.Username, "email": user.Email, "phoneNumber": user.PhoneNumber, "address": user.Address})
+
+}
+
+func ChangePassword(c *gin.Context) {
+	var passworData struct {
+		OldPassword string `json:"current_password"`
+		NewPassword string `json:"new_password"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := c.ShouldBindJSON(&passworData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userId := c.GetHeader("user")
+	objectId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	fmt.Println("object", objectId)
+	var user models.User
+	err = config.UserCollection.FindOne(context.Background(), bson.M{"_id": objectId}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	hashedPassword, err := base64.StdEncoding.DecodeString(user.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding hashed password"})
+		return
+	}
+	salt, err := base64.StdEncoding.DecodeString(user.Salt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding hashed salt"})
+		return
+	}
+	fmt.Println("oldpass", passworData)
+	if !VerifyPassword(passworData.OldPassword, []byte(hashedPassword), []byte(salt)) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password has wrong"})
+		return
+	}
+
+	NewPassword := HashPassword(passworData.NewPassword, salt)
+	base64HashedPassword := base64.StdEncoding.EncodeToString(NewPassword)
+	user.Password = base64HashedPassword
+	update := bson.M{
+		"$set": bson.M{
+			"password": base64HashedPassword,
+		},
+	}
+	result, err := config.UserCollection.UpdateOne(ctx, bson.M{"_id": objectId}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update password"})
+		return
+	}
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no user found with the provided ID"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Password has change successfully"})
 
 }

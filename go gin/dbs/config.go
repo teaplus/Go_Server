@@ -5,6 +5,9 @@ import (
     "log"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
+     "github.com/joho/godotenv"
+     "os"
+     
 )
 
 var Client *mongo.Client
@@ -12,7 +15,11 @@ var UserCollection *mongo.Collection
 var KeyCollection *mongo.Collection
 
 func ConnectMongoDB() {
-    clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatalf("Error loading .env file")
+    }
+    clientOptions := options.Client().ApplyURI(os.Getenv("DB_URL"))
     client, err := mongo.Connect(context.TODO(), clientOptions)
     if err != nil {
         log.Fatal(err)

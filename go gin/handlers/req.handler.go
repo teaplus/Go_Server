@@ -20,6 +20,8 @@ func MiddlewareAuthentication() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken := c.GetHeader("Authorization")
 		clientId := c.GetHeader("X-Client-ID")
+		fmt.Println("XXXXXXXXXX", clientId)
+		fmt.Println("YYYY", accessToken)
 
 		objectId, err := primitive.ObjectIDFromHex(clientId)
 		if err != nil {
@@ -39,6 +41,7 @@ func MiddlewareAuthentication() gin.HandlerFunc {
 			return
 		}
 		if claims != nil {
+			fmt.Println("claim")
 			c.Next()
 		}
 	}
