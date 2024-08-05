@@ -263,6 +263,18 @@ func Logout(c *gin.Context) {
 
 }
 
+// GetUser godoc
+// @Summary Get user details
+// @Description Retrieve details of a user based on user ID
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param user header string true "User ID"
+// @Success 200 {object} gin.H{"username": "username", "email": "email", "phoneNumber": "phoneNumber", "address": "address"}
+// @Failure 400 {object} models.ErrorResponse{"error": "Invalid input"}
+// @Failure 500 {object} models.ErrorResponse{"error": "Internal server error"}
+// @Router /api/v1/user [get]
+
 func GetUser(c *gin.Context) {
 	userId := c.GetHeader("user")
 	objectId, err := primitive.ObjectIDFromHex(userId)
@@ -282,6 +294,19 @@ func GetUser(c *gin.Context) {
 
 }
 
+
+// ChangePassword godoc
+// @Summary Change user password
+// @Description Change the password for the logged-in user
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param current_password body string true "Current password"
+// @Param new_password body string true "New password"
+// @Success 200 {object} gin.H{"message": "Password has changed successfully"}
+// @Failure 400 {object} models.ErrorResponse{"error": "Invalid input"}
+// @Failure 500 {object} models.ErrorResponse{"error": "Internal server error"}
+// @Router /api/v1/changepassword [post]
 func ChangePassword(c *gin.Context) {
 	var passworData struct {
 		OldPassword string `json:"current_password"`
