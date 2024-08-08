@@ -37,5 +37,5 @@ func main() {
 	// Định nghĩa các route cho đăng ký và đăng nhập
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
-	router.Run(":8080") // Chạy server trên cổng 8080
+	router.Run(":8081") // Chạy server trên cổng 8080
 }
